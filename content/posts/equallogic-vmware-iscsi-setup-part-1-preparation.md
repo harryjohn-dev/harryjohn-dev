@@ -1,5 +1,5 @@
 ---
-title: "EqualLogic VMware iSCSI Setup -- Part 1: Preparation"
+title: "EqualLogic VMware iSCSI Setup - Part 1: Preparation"
 date: 2013-02-24T00:00:00Z
 draft: false
 tags: ["equallogic", "iscsi", "vmware", "san", "networking", "dell"]

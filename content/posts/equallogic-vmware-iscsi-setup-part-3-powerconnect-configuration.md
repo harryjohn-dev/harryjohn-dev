@@ -1,5 +1,5 @@
 ---
-title: "EqualLogic VMware iSCSI Setup -- Part 3: PowerConnect Configuration"
+title: "EqualLogic VMware iSCSI Setup - Part 3: PowerConnect Configuration"
 date: 2013-12-30T00:00:00Z
 draft: false
 tags: ["equallogic", "iscsi", "vmware", "san", "networking", "dell", "powerconnect", "switches"]

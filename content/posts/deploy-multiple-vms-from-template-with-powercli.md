@@ -85,12 +85,12 @@ Finally, we need the command to deploy a VM using the parameters we have collect
 ```powershell
 try {
 $vm = New-VM -Name $name `
-	-VMHost $vmhost `
-	-Template $template `
-	-OSCustomizationSpec $custSpec `
-	-Datastore $datastore `
-	-Location $folder `
-	-ErrorAction:Stop
+    -VMHost $vmhost `
+    -Template $template `
+    -OSCustomizationSpec $custSpec `
+    -Datastore $datastore `
+    -Location $folder `
+    -ErrorAction:Stop
 }
 catch
 {
@@ -164,33 +164,34 @@ $vmNumber = $vmFirstNumber
 $vmCounter = 0
 
 1..$vmQuantity | foreach {
-	# if VM number is less than 10 add a 0 onto the server name so we dont have MAILSERVER1 for example
-	if ($vmNumber -lt 10) {
-		$vmName = $vmNamePrefix + "0" + $vmNumber
-	} else {
-		$vmName = $vmNamePrefix + $vmNumber
-	}
+    # if VM number is less than 10 add a 0 onto the server name so we 
+    # dont have MAILSERVER1 for example
+    if ($vmNumber -lt 10) {
+        $vmName = $vmNamePrefix + "0" + $vmNumber
+    } else {
+        $vmName = $vmNamePrefix + $vmNumber
+    }
 
-	# compile IP address
+    # compile IP address
         $vmIpAddress = $ipPrefix + ($ipSuffix + ($vmCounter))
 
-	# setup object properties
-	$properties = [ordered]@{
-		MachineName = $vmName
-		IpAddress = $vmIpAddress
-		CloneInitiated = 0
-		Cloned = 0
-		PoweredOn = 0
-		ReIP = 0
-	}
+    # setup object properties
+    $properties = [ordered]@{
+        MachineName = $vmName
+        IpAddress = $vmIpAddress
+        CloneInitiated = 0
+        Cloned = 0
+        PoweredOn = 0
+        ReIP = 0
+    }
 
-	# create object and add to collection
-	$obj = New-Object -TypeName PSObject -Property $properties
-	$vmStatus += $obj
+    # create object and add to collection
+    $obj = New-Object -TypeName PSObject -Property $properties
+    $vmStatus += $obj
 
-	# increase counters
-	$vmNumber++
-	$vmCounter++
+    # increase counters
+    $vmNumber++
+    $vmCounter++
 }
 ```
 
@@ -205,8 +206,8 @@ Prepare the command to deploy a VM using the deploy VM script we created earlier
 
 # prepare VM deploy job command
 $job= {
-	Set-Location $args[0]
-	powershell -command ".\DeployVM.ps1 -session $($args[1]) -vcserver $($args[2]) -name $($args[3]) -datastore $($args[4]) -ipaddr $($args[5]) -template `'$($args[6])`' -folder `'$($args[7])`'"
+    Set-Location $args[0]
+    powershell -command ".\DeployVM.ps1 -session $($args[1]) -vcserver $($args[2]) -name $($args[3]) -datastore $($args[4]) -ipaddr $($args[5]) -template `'$($args[6])`' -folder `'$($args[7])`'"
 }
 
 # clear job list
@@ -217,91 +218,93 @@ Time to start deploying multiple VMs! The following loop will continue looping u
 
 ```powershell
 while ($vmsCompleted.Count -lt $vmQuantity) {
+###################
+# Initiate VM cloning, using $maxConcurrentJobs as the limit
+###################
 
-	###################
-	# Initiate VM cloning, using $maxConcurrentJobs as the limit
-	###################
+# do not start job if $maxConcurrentJobs are already running, do not start if all VMs are now cloned (clone initiated) - skip this task
+if (($vmsCloneInitiated.Count -lt $vmQuantity) -and ($runningJobCount -lt $maxConcurrentJobs)) {
 
-	# do not start job if $maxConcurrentJobs are already running, do not start if all VMs are now cloned (clone initiated) - skip this task
-	if (($vmsCloneInitiated.Count -lt $vmQuantity) -and ($runningJobCount -lt $maxConcurrentJobs)) {
+    # select VMs which have not yet been cloned - and only the first $maxConcurrentJobs VMs
+    $vmStatus | where {($_.Cloned -eq 0)} | 
+        Select-Object -first $maxConcurrentJobs | 
+        foreach {
+            # create job
+            Start-Job -Name $_.MachineName -ScriptBlock $job -ArgumentList $currentPath, $session, $vcserver, $_.MachineName, $_.Datastore, $_.IpAddress, $template, $folder        
 
-        # select VMs which have not yet been cloned - and only the first $maxConcurrentJobs VMs
-        $vmStatus | where {($_.Cloned -eq 0)} | Select-Object -first $maxConcurrentJobs | foreach {
-
-		    # create job
-		    Start-Job -Name $_.MachineName -ScriptBlock $job -ArgumentList $currentPath, $session, $vcserver, $_.MachineName, $_.Datastore, $_.IpAddress, $template, $folder		
-
-		    # update vmStatus object collection
-		    $_.CloneInitiated = 1
+            # update vmStatus object collection
+            $_.CloneInitiated = 1
         }
-	}
+}
 ```
 
-There are a few variables in the above example I have not yet mentioned, such as $vmsComplete.Count, $vmsCloneInitiated.Count and $runningJobCount. Lets update these
+There are a few variables in the above example I have not yet mentioned, such as `$vmsComplete.Count`, `$vmsCloneInitiated.Count` and `$runningJobCount`. Lets update these
 
 ```powershell
-	###################
-	# Check running job count and look for VMs which have finished cloning
-	###################
+###################
+# Check running job count and look for VMs which have finished cloning
+###################
 
-	# count current running jobs
-	$jobs = Get-Job 
-	$runningJobs = $jobs | ? { $_.state -eq "Running" }
-	$runningJobCount = $runningJobs.count
+# count current running jobs
+$jobs = Get-Job 
+$runningJobs = $jobs | ? { $_.state -eq "Running" }
+$runningJobCount = $runningJobs.count
 
-	# check for vms which have finished cloning
-	$completedJobs = $jobs | ? { $_.state -eq "Completed" }	
+# check for vms which have finished cloning
+$completedJobs = $jobs | ? { $_.state -eq "Completed" }    
 
-	# update $vmStatus
-	foreach ($completedJob in $completedJobs) {
+# update $vmStatus
+foreach ($completedJob in $completedJobs) {
 
-		# get index of object and set cloned to 1
-		$vmStatusIndex = 0..($vmStatus.Count -1) | where {$vmStatus[$_].MachineName -eq $completedJob.Name}
-		$vmStatus[$vmStatusIndex].Cloned = 1
-	}
+    # get index of object and set cloned to 1
+    $vmStatusIndex = 0..($vmStatus.Count -1) | 
+        where {$vmStatus[$_].MachineName -eq $completedJob.Name}
+
+    $vmStatus[$vmStatusIndex].Cloned = 1
+}
 ```
 
 Finally, the rest of the loop to complete the remaining tasks. I have stripped out much of the code within each task to keep this looking simple for the purpose of the article.
 
 
 ```powershell
-	###################
-	# Power on VMs which have finished cloning
-	###################
+###################
+# Power on VMs which have finished cloning
+###################
 
-	$vmStatus | where {($_.Cloned -ne 0) -and ($_.PoweredOn -eq 0)} | foreach {
+$vmStatus | where {($_.Cloned -ne 0) -and ($_.PoweredOn -eq 0)} | foreach {
 
-		# start the VM
-		Start-VM $_.MachineName
+    # start the VM
+    Start-VM $_.MachineName
 
-		# update $vmStatus
-		$_.PoweredOn = 1
-	}	
+    # update $vmStatus
+    $_.PoweredOn = 1
+}    
 
-	###################
-	# Set correct IP address for VMs and start Citrix service
-	###################
+###################
+# Set correct IP address for VMs and start Citrix service
+###################
 
-	$vmStatus | where {($_.Cloned -ne 0) -and ($_.PoweredOn -ne 0) -and ($_.ReIP -eq 0)} | foreach {
-
-		# check machine is online
-		if (Test-Connection $_.MachineName -Count 1 -ErrorAction SilentlyContinue) {
+$vmStatus | 
+    where {($_.Cloned -ne 0) -and ($_.PoweredOn -ne 0) -and ($_.ReIP -eq 0)} | 
+    foreach {
+        # check machine is online
+        if (Test-Connection $_.MachineName -Count 1 -ErrorAction SilentlyContinue) {
 
             # code to set IP address - mentioned later in blog post
-		}
-	}
-
-	###################
-	# Update counters and sleep
-	###################
-
-	# update counters
-	[ARRAY]$vmsCloneInitiated = $vmStatus | ? CloneInitiated -eq 1
-	[ARRAY]$vmsCompleted = $vmStatus | ? {($_.Cloned -ne 0) -and ($_.PoweredOn -ne 0) -and ($_.ReIP -ne 0)}
-
-	# sleep for $cycleTime seconds
-	Start-Sleep $cycleTime
+    }
 }
+
+###################
+# Update counters and sleep
+###################
+
+# update counters
+[ARRAY]$vmsCloneInitiated = $vmStatus | ? CloneInitiated -eq 1
+[ARRAY]$vmsCompleted = $vmStatus | ? {($_.Cloned -ne 0) -and ($_.PoweredOn -ne 0) -and ($_.ReIP -ne 0)}
+
+# sleep for $cycleTime seconds
+Start-Sleep $cycleTime
 ```
 
 
@@ -310,42 +313,49 @@ Finally, the rest of the loop to complete the remaining tasks. I have stripped o
 I mentioned earlier I didn’t get along with the guest customisation method of setting the VM’s IP address. In the example above you can see where I set the IP address – one of the last things I do. I removed the code snippet for clarity in the article but here it is. Note, I also flush DNS and wait 15 seconds before continuing:
 
 ```powershell
-$vmStatus | where {($_.Cloned -ne 0) -and ($_.PoweredOn -ne 0) -and ($_.InAD -ne 0) -and ($_.ActivateWin -ne 0) -and ($_.ActivateOffice -ne 0) -and ($_.ReIP -eq 0)} | foreach {
+$vmStatus | 
+    where {($_.Cloned -ne 0) -and 
+          ($_.PoweredOn -ne 0) -and 
+          ($_.InAD -ne 0) -and 
+          ($_.ActivateWin -ne 0) -and 
+          ($_.ActivateOffice -ne 0) -and 
+          ($_.ReIP -eq 0)} | 
+    foreach {
+        # check machine is online
+        if (-not (Test-Connection $_.MachineName -Count 1 -ErrorAction SilentlyContinue)) {
+            continue
+        }
 
-		# check machine is online
-		if (Test-Connection $_.MachineName -Count 1 -ErrorAction SilentlyContinue) {
+        Write-Host "$($_.MachineName): Online, changing IP address"
 
-			Write-Host "$($_.MachineName): Online, changing IP address"
+        # change IP settings
+        try {
+            Get-VM -Name $_.MachineName | Get-VMGuestNetworkInterface `
+                -Guestuser $localAdminUser `
+                -GuestPassword $localAdminPassword | `
+                    Where-Object { $_.name -like $localNICNameQuery } | `
+                        Set-VMGuestNetworkInterface `
+                            -Guestuser $localAdminUser `
+                            -GuestPassword $localAdminPassword `
+                            -IPPolicy static `
+                            -IP $_.IpAddress `
+                            -Netmask $networkSubnet  `
+                            -Gateway $networkGateway `
+                            -DNS $networkDns
 
-			# change IP settings
-			try {
-				Get-VM -Name $_.MachineName | Get-VMGuestNetworkInterface `
-					-Guestuser $localAdminUser `
-					-GuestPassword $localAdminPassword | `
-						? { $_.name -like $localNICNameQuery } | `
-							Set-VMGuestNetworkInterface `
-								-Guestuser $localAdminUser `
-								-GuestPassword $localAdminPassword `
-								-IPPolicy static `
-								-IP $_.IpAddress `
-								-Netmask $networkSubnet  `
-								-Gateway $networkGateway `
-								-DNS $networkDns
+            Write-Host "$($_.MachineName): IP Address changed"
 
-				Write-Host "$($_.MachineName): IP Address changed"
+            # flush dns
+            ipconfig /flushdns
+            Start-Sleep 15
 
-				# flush dns
-				ipconfig /flushdns
-                Start-Sleep 15
-
-        		# update $vmStatus	
-				$_.ReIP = 1
-			}
-			catch {
-                $null
-			}
-		}
-	}
+            # update $vmStatus    
+            $_.ReIP = 1
+        }
+        catch {
+            $null
+        }
+    }
 ```
 
 ## Conclusion

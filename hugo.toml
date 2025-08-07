@@ -3,11 +3,15 @@ languageCode = 'en-us'
 title = 'Harry John'
 theme = 'PaperMod'
 
+enableRobotsTXT = true
+
 [params]
   description = "Harry John's blog about IT infrastructure, VMware, and technology"
   author = "Harry John"
   ShowReadingTime = true
   ShowWordCount = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
   
 [params.homeInfoParams]
   Title = "Hi there 👋"
@@ -19,3 +23,22 @@ theme = 'PaperMod'
     name = "Posts"
     url = "/posts/"
     weight = 10
+
+# Taxonomies
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+
+# Permalinks
+[permalinks]
+  posts = "/:title/"
+
+# Markup
+[markup]
+  [markup.highlight]
+    noClasses = false
+    style = "github"
+    tabWidth = 4
+    lineNos = true
+    lineNumbersInTable = true
+    guessSyntax = true

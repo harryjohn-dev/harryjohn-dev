@@ -1,5 +1,5 @@
 ---
-title: "EqualLogic VMware iSCSI Setup -- Part 2: Network Configuration"
+title: "EqualLogic VMware iSCSI Setup - Part 2: Network Configuration"
 date: 2013-02-26T00:00:00Z
 draft: false
 tags: ["equallogic", "iscsi", "vmware", "san", "networking", "dell", "powerconnect"]

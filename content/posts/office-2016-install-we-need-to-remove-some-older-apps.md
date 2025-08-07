@@ -1,5 +1,5 @@
 ---
-title: "Office 2016 Install -- \"We need to remove some older apps\""
+title: "Office 2016 Install - \"We need to remove some older apps\""
 date: 2015-09-22T00:00:00Z
 draft: false
 description: "Office 2016 was made available today to the Office 365 subscribers running on PC -- it has been available to Mac users since July. However the installation might not go as smoothly as you would expect, especially if you have some older non-365 Office type applications installed."
